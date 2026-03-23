@@ -680,7 +680,7 @@ fbq('track', 'PageView');
           <div id="booking-form-wrap">
             <h3>Start Your Inquiry</h3>
             <p>Tell me about your idea and I'll be in touch soon.</p>
-            <form id="inquiry-form" action="https://instagram.com/inkversetattooabi" method="POST" enctype="text/plain">
+            <form id="inquiry-form">
               <div class="form-group">
                 <label for="bname">Your Name</label>
                 <input type="text" id="bname" name="Name" placeholder="First & Last" required aria-required="true" />
@@ -690,17 +690,25 @@ fbq('track', 'PageView');
                 <input type="email" id="bemail" name="Email" placeholder="you@example.com" required aria-required="true" />
               </div>
               <div class="form-group">
+                <label for="bphone">Phone Number</label>
+                <input type="tel" id="bphone" name="Phone" placeholder="(832) 000-0000" />
+              </div>
+              <div class="form-group">
                 <label for="bstyle">Style / Service</label>
                 <select id="bstyle" name="Style" aria-label="Select a service type">
-                  <option>Asian-Inspired Tattoo Art</option><option>Abstract Blackwork Tattoo</option><option>Watercolor Tattoo</option>
-                  <option>Other / Not Sure</option>
+                  <option>Asian-Inspired Tattoo Art</option><option>Abstract Blackwork Tattoo</option><option>Watercolor Tattoo</option><option>Realism</option><option>Fine Line</option><option>Surrealism</option><option>Other / Not Sure</option>
                 </select>
+              </div>
+              <div class="form-group">
+                <label for="bdate">Preferred Date</label>
+                <input type="text" id="bdate" name="Date" placeholder="e.g. April 2025, flexible, ASAP..." />
               </div>
               <div class="form-group">
                 <label for="bmessage">Your Idea</label>
                 <textarea id="bmessage" name="Message" placeholder="Describe your idea, placement, size, and any reference images you have in mind..." aria-label="Your message"></textarea>
               </div>
-              <button type="submit" class="form-submit" aria-label="Send inquiry">Send Inquiry</button>
+              <div id="form-error" style="display:none;color:#ff6b6b;font-size:0.85rem;margin-bottom:12px;padding:10px;background:rgba(255,107,107,0.1);border-radius:6px;border:1px solid rgba(255,107,107,0.3);"></div>
+              <button type="submit" class="form-submit" id="form-btn" aria-label="Send inquiry">Send Inquiry</button>
             </form>
           </div>
           <div class="form-success" id="form-success">
@@ -812,32 +820,45 @@ fbq('track', 'PageView');
       checkScroll();
     })();
 
-    /* Form submission success state */
+    /* Form submission — sends to Resend via Convex */
     (function(){
       var form = document.getElementById('inquiry-form');
       var wrap = document.getElementById('booking-form-wrap');
       var success = document.getElementById('form-success');
+      var errBox = document.getElementById('form-error');
+      var btn = document.getElementById('form-btn');
       if(!form || !wrap || !success) return;
       form.addEventListener('submit', function(e){
         e.preventDefault();
-        wrap.style.display = 'none';
-        success.classList.add('show');
-        /* After showing success, redirect to actual action after 1.5s */
-        setTimeout(function(){
-          var action = form.getAttribute('action') || '';
-          if(action.indexOf('mailto:') === 0){
-            var subject = encodeURIComponent('New Inquiry from ' + (document.getElementById('bname').value || 'Website'));
-            var body = encodeURIComponent(
-              'Name: ' + (document.getElementById('bname').value || '') +
-              '\nEmail: ' + (document.getElementById('bemail').value || '') +
-              '\nStyle: ' + (document.getElementById('bstyle').value || '') +
-              '\nMessage: ' + (document.getElementById('bmessage').value || '')
-            );
-            window.location.href = action + '?subject=' + subject + '&body=' + body;
-          } else if(action.indexOf('instagram.com') !== -1){
-            window.open(action, '_blank');
+        if(errBox) errBox.style.display = 'none';
+        if(btn){ btn.disabled = true; btn.textContent = 'Sending...'; }
+        var payload = {
+          name: (document.getElementById('bname').value || '').trim(),
+          email: (document.getElementById('bemail').value || '').trim(),
+          phone: (document.getElementById('bphone') ? document.getElementById('bphone').value : '') || '',
+          service: (document.getElementById('bstyle').value || '').trim(),
+          date: (document.getElementById('bdate') ? document.getElementById('bdate').value : '') || '',
+          message: (document.getElementById('bmessage').value || '').trim(),
+        };
+        fetch('https://curious-lemming-262.convex.site/api/booking/inkverse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        .then(function(r){ return r.json().then(function(d){ return { ok: r.ok, data: d }; }); })
+        .then(function(res){
+          if(res.ok){
+            wrap.style.display = 'none';
+            success.classList.add('show');
+          } else {
+            if(btn){ btn.disabled = false; btn.textContent = 'Send Inquiry'; }
+            if(errBox){ errBox.style.display = 'block'; errBox.textContent = 'Something went wrong. Please try again or text us directly.'; }
           }
-        }, 1500);
+        })
+        .catch(function(){
+          if(btn){ btn.disabled = false; btn.textContent = 'Send Inquiry'; }
+          if(errBox){ errBox.style.display = 'block'; errBox.textContent = 'Could not send. Please check your connection and try again.'; }
+        });
       });
     })();
   </script>
